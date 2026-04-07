@@ -5,77 +5,177 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-DATA = "data.xlsx"
+# Dosyalar
+KISILER="kisiler.xlsx"
+OPERASYON="operasyon.xlsx"
+MODEL="model.xlsx"
+BANT="bant.xlsx"
+DATA="data.xlsx"
 
-if not os.path.exists(DATA):
-    pd.DataFrame(columns=["Tarih","Kisi","Model","Bant","Operasyon","Adet"]).to_excel(DATA, index=False)
+def init():
+    if not os.path.exists(KISILER):
+        pd.DataFrame(columns=["AdSoyad"]).to_excel(KISILER,index=False)
+    if not os.path.exists(OPERASYON):
+        pd.DataFrame(columns=["Operasyon","Sure"]).to_excel(OPERASYON,index=False)
+    if not os.path.exists(MODEL):
+        pd.DataFrame(columns=["Model"]).to_excel(MODEL,index=False)
+    if not os.path.exists(BANT):
+        pd.DataFrame(columns=["Bant"]).to_excel(BANT,index=False)
+    if not os.path.exists(DATA):
+        pd.DataFrame(columns=["Tarih","Saat","AdSoyad","Operasyon","Bant","Model","Adet","Sure"]).to_excel(DATA,index=False)
 
-@app.route("/", methods=["GET","POST"])
+init()
+
+TEMPLATE = """
+<html>
+<head>
+<style>
+body {font-family:Arial; margin:0;}
+.sidebar {width:220px; height:100vh; background:#1e293b; color:white; float:left;}
+.sidebar h2 {padding:20px;}
+.sidebar a {display:block; padding:12px; color:white; text-decoration:none;}
+.sidebar a:hover {background:#334155;}
+.top {margin-left:220px; background:#0ea5e9; color:white; padding:15px;}
+.content {margin-left:220px; padding:20px;}
+.card {background:#f1f5f9; padding:10px; margin:10px 0;}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h2>MAY</h2>
+<a href="/yonetici">Yönetici</a>
+<a href="/veri">Üretim Veri Girişi</a>
+<a>Kumaş Kontrol</a>
+<a>Aksesuar Kontrol</a>
+<a>Sipariş Listesi</a>
+<a href="/rapor">Raporlar</a>
+</div>
+
+<div class="top">
+<h2>MAY SİSTEMİ</h2>
+</div>
+
+<div class="content">
+{{content|safe}}
+</div>
+
+</body>
+</html>
+"""
+
+@app.route("/")
 def home():
-    df = pd.read_excel(DATA)
+    return redirect("/yonetici")
 
-    arama = request.args.get("arama")
+# YÖNETİCİ
+@app.route("/yonetici", methods=["GET","POST"])
+def yonetici():
+    if request.method=="POST":
+        tip=request.form["tip"]
+        val=request.form["val"]
+        if tip=="kisi":
+            df=pd.read_excel(KISILER); df.loc[len(df)]=[val]; df.to_excel(KISILER,index=False)
+        if tip=="model":
+            df=pd.read_excel(MODEL); df.loc[len(df)]=[val]; df.to_excel(MODEL,index=False)
+        if tip=="bant":
+            df=pd.read_excel(BANT); df.loc[len(df)]=[val]; df.to_excel(BANT,index=False)
+        if tip=="operasyon":
+            sure=request.form["sure"]
+            df=pd.read_excel(OPERASYON); df.loc[len(df)]=[val,int(sure)]; df.to_excel(OPERASYON,index=False)
 
-    if arama:
-        df = df[df.apply(lambda x: x.astype(str).str.contains(arama).any(), axis=1)]
+    content="""
+    <h3>Yönetici Paneli</h3>
 
-    table = df.to_html()
-
-    return render_template_string("""
-    <h1>MAY SİSTEMİ</h1>
-
-    <form method="get">
-        <input name="arama" placeholder="Ara...">
-        <button>Ara</button>
+    <form method="post">
+    <input name="val" placeholder="Ad Soyad">
+    <button name="tip" value="kisi">Kişi Ekle</button>
     </form>
 
     <form method="post">
-        <input name="kisi" placeholder="Kişi"><br>
-        <input name="model" placeholder="Model"><br>
-        <input name="bant" placeholder="Bant"><br>
-        <input name="operasyon" placeholder="Operasyon"><br>
-        <input name="adet" placeholder="Adet"><br>
-        <button>Kaydet</button>
+    <input name="val" placeholder="Model">
+    <button name="tip" value="model">Model Ekle</button>
+    </form>
+
+    <form method="post">
+    <input name="val" placeholder="Bant">
+    <button name="tip" value="bant">Bant Ekle</button>
+    </form>
+
+    <form method="post">
+    <input name="val" placeholder="Operasyon">
+    <input name="sure" placeholder="sn">
+    <button name="tip" value="operasyon">Operasyon Ekle</button>
+    </form>
+    """
+
+    return render_template_string(TEMPLATE,content=content)
+
+# VERİ GİRİŞ
+@app.route("/veri", methods=["GET","POST"])
+def veri():
+    kisiler=pd.read_excel(KISILER)
+    ops=pd.read_excel(OPERASYON)
+    bant=pd.read_excel(BANT)
+    model=pd.read_excel(MODEL)
+
+    if request.method=="POST":
+        kisi=request.form["kisi"]
+        operasyon=request.form["operasyon"]
+        bantv=request.form["bant"]
+        modelv=request.form["model"]
+        saat=request.form["saat"]
+        adet=request.form["adet"]
+
+        sure=int(ops[ops["Operasyon"]==operasyon]["Sure"].values[0])
+
+        df=pd.read_excel(DATA)
+        df.loc[len(df)]=[datetime.now().strftime("%Y-%m-%d"),saat,kisi,operasyon,bantv,modelv,int(adet),sure]
+        df.to_excel(DATA,index=False)
+
+    data=pd.read_excel(DATA)
+
+    content=f"""
+    <h3>Üretim Veri Girişi</h3>
+
+    <form method="post">
+    Kişi:<input name="kisi"><br>
+    Operasyon:<input name="operasyon"><br>
+    Bant:<input name="bant"><br>
+    Model:<input name="model"><br>
+    Saat:<input name="saat" placeholder="08:00-18:00"><br>
+    Adet:<input name="adet"><br>
+    <button>Kaydet</button>
     </form>
 
     <h3>Kayıtlar</h3>
-    """ + table + """
+    {data.to_html()}
+    """
 
-    <h3>Tarih ile indir</h3>
-    <form action="/indir">
-        <input name="tarih" placeholder="2026-04-07">
-        <button>Excel indir</button>
-    </form>
-    """)
+    return render_template_string(TEMPLATE,content=content)
 
-@app.route("/", methods=["POST"])
-def ekle():
-    df = pd.read_excel(DATA)
+# RAPOR
+@app.route("/rapor")
+def rapor():
+    df=pd.read_excel(DATA)
+    if len(df)>0:
+        df["Performans %"]=(df["Adet"]*df["Sure"])/540*100
 
-    df.loc[len(df)] = [
-        datetime.now().strftime("%Y-%m-%d"),
-        request.form["kisi"],
-        request.form["model"],
-        request.form["bant"],
-        request.form["operasyon"],
-        int(request.form["adet"])
-    ]
+    dosya="rapor.xlsx"
+    df.to_excel(dosya,index=False)
 
-    df.to_excel(DATA, index=False)
-    return redirect("/")
+    content=f"""
+    <h3>Rapor</h3>
+    {df.to_html()}
+    <br><a href="/indir">Excel indir</a>
+    """
+
+    return render_template_string(TEMPLATE,content=content)
 
 @app.route("/indir")
 def indir():
-    tarih = request.args.get("tarih")
-    df = pd.read_excel(DATA)
+    return send_file("rapor.xlsx",as_attachment=True)
 
-    if tarih:
-        df = df[df["Tarih"] == tarih]
-
-    dosya = "filtre.xlsx"
-    df.to_excel(dosya, index=False)
-
-    return send_file(dosya, as_attachment=True)
-
-if __name__ == "__main__":
+if __name__=="__main__":
     app.run()
