@@ -101,7 +101,7 @@ def yonetim():
     {{operasyon.to_html()|safe}}
 
     <a href="/">Ana Sayfa</a>
-    """ , kisiler=kisiler, modeller=modeller, bantlar=bantlar, operasyon=operasyon)
+    """, kisiler=kisiler, modeller=modeller, bantlar=bantlar, operasyon=operasyon)
 
 @app.route("/veri", methods=["GET","POST"])
 def veri():
@@ -152,7 +152,7 @@ def veri():
 
     <a href="/indir">Excel İndir</a><br>
     <a href="/">Ana Sayfa</a>
-    """ , data=data)
+    """, data=data)
 
 @app.route("/indir")
 def indir():
@@ -169,16 +169,7 @@ def rapor():
     <h2>Rapor</h2>
     {{df.to_html()|safe}}
     <a href="/">Ana Sayfa</a>
-    """ , df=df)
-
-if __name__ == "__main__":
-    app.run()from flask import Flask
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "<h1>MAY SİSTEMİ ÇALIŞIYOR 🚀</h1>"
+    """, df=df)
 
 if __name__ == "__main__":
     app.run()
