@@ -1,11 +1,9 @@
-from flask import Flask, render_template_string, request, redirect, send_file
+from flask import Flask, render_template_string, request, redirect
 import pandas as pd
 import os
 from datetime import datetime
 
 app = Flask(__name__)
-
-pd.options.mode.chained_assignment = None
 
 KISILER="kisiler.xlsx"
 OPERASYON="operasyon.xlsx"
@@ -27,42 +25,35 @@ def init():
 
 init()
 
-TEMPLATE = """
+TEMPLATE="""
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body {font-family:Arial; margin:0; background:#f1f5f9;}
-.sidebar {width:220px;height:100vh;background:#1e293b;color:white;position:fixed;}
-.sidebar h2 {padding:20px;}
-.sidebar a {display:block;padding:12px;color:white;text-decoration:none;}
-.sidebar a:hover {background:#334155;}
-.top {margin-left:220px;background:#0ea5e9;color:white;padding:15px;}
-.content {margin-left:220px;padding:20px;}
-.card {background:white;padding:15px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-@media (max-width:768px){
+body{font-family:Arial;margin:0;background:#f1f5f9;}
+.sidebar{width:200px;height:100vh;background:#1e293b;color:white;position:fixed;}
+.sidebar a{display:block;padding:12px;color:white;text-decoration:none;}
+.sidebar a:hover{background:#334155;}
+.top{margin-left:200px;background:#0ea5e9;color:white;padding:15px;}
+.content{margin-left:200px;padding:20px;}
+.card{background:white;padding:15px;margin:10px;border-radius:10px;}
+@media(max-width:768px){
 .sidebar{width:100%;height:auto;position:relative;}
-.top{margin-left:0;text-align:center;}
-.content{margin-left:0;}
-input,button,select{width:100%;padding:10px;margin:5px 0;}
-table{display:block;overflow-x:auto;font-size:12px;}
+.top,.content{margin-left:0;}
 }
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-<h2>MAY</h2>
+<h3 style="padding:10px">MAY</h3>
 <a href="/yonetici">Yönetici</a>
-<a href="/veri">Üretim Veri Girişi</a>
-<a href="/rapor">Raporlar</a>
+<a href="/veri">Veri Girişi</a>
+<a href="/rapor">Rapor</a>
 </div>
 
-<div class="top"><h2>MAY SİSTEMİ</h2></div>
-
-<div class="content">
-{{content|safe}}
-</div>
+<div class="top">MAY SİSTEMİ</div>
+<div class="content">{{content|safe}}</div>
 
 </body>
 </html>
@@ -72,7 +63,8 @@ table{display:block;overflow-x:auto;font-size:12px;}
 def home():
     return redirect("/yonetici")
 
-@app.route("/yonetici", methods=["GET","POST"])
+# YÖNETİCİ
+@app.route("/yonetici",methods=["GET","POST"])
 def yonetici():
     if request.method=="POST":
         tip=request.form.get("tip")
@@ -80,30 +72,137 @@ def yonetici():
 
         if val:
             if tip=="kisi":
-                df=pd.read_excel(KISILER); df.loc[len(df)]=[val]; df.to_excel(KISILER,index=False)
+                df=pd.read_excel(KISILER)
+                df.loc[len(df)]=[val]
+                df.to_excel(KISILER,index=False)
+
             if tip=="model":
-                df=pd.read_excel(MODEL); df.loc[len(df)]=[val]; df.to_excel(MODEL,index=False)
+                df=pd.read_excel(MODEL)
+                df.loc[len(df)]=[val]
+                df.to_excel(MODEL,index=False)
+
             if tip=="bant":
-                df=pd.read_excel(BANT); df.loc[len(df)]=[val]; df.to_excel(BANT,index=False)
+                df=pd.read_excel(BANT)
+                df.loc[len(df)]=[val]
+                df.to_excel(BANT,index=False)
+
             if tip=="operasyon":
                 sure=request.form.get("sure")
                 if sure:
-                    df=pd.read_excel(OPERASYON); df.loc[len(df)]=[val,int(sure)]; df.to_excel(OPERASYON,index=False)
+                    df=pd.read_excel(OPERASYON)
+                    df.loc[len(df)]=[val,int(sure)]
+                    df.to_excel(OPERASYON,index=False)
 
-    content="<h3>Yönetici Paneli aktif</h3>"
+    content="""
+    <h3>Yönetici</h3>
+
+    <div class="card">
+    <h4>Kişi</h4>
+    <form method="post">
+    <input name="val"><button name="tip" value="kisi">Ekle</button>
+    </form>
+    </div>
+
+    <div class="card">
+    <h4>Model</h4>
+    <form method="post">
+    <input name="val"><button name="tip" value="model">Ekle</button>
+    </form>
+    </div>
+
+    <div class="card">
+    <h4>Bant</h4>
+    <form method="post">
+    <input name="val"><button name="tip" value="bant">Ekle</button>
+    </form>
+    </div>
+
+    <div class="card">
+    <h4>Operasyon</h4>
+    <form method="post">
+    <input name="val"><input name="sure">
+    <button name="tip" value="operasyon">Ekle</button>
+    </form>
+    </div>
+    """
+
     return render_template_string(TEMPLATE,content=content)
 
-@app.route("/veri")
+# VERİ
+@app.route("/veri",methods=["GET","POST"])
 def veri():
-    return render_template_string(TEMPLATE,content="<h3>Veri sayfası</h3>")
+    kisiler=pd.read_excel(KISILER)
+    ops=pd.read_excel(OPERASYON)
+    bant=pd.read_excel(BANT)
+    model=pd.read_excel(MODEL)
 
+    if request.method=="POST":
+        kisi=request.form.get("kisi")
+        operasyon=request.form.get("operasyon")
+        bantv=request.form.get("bant")
+        modelv=request.form.get("model")
+        saat=request.form.get("saat")
+        adet=request.form.get("adet")
+
+        if kisi and operasyon and bantv and modelv and saat and adet:
+            try:
+                sure=int(ops[ops["Operasyon"]==operasyon]["Sure"].values[0])
+            except:
+                sure=0
+
+            df=pd.read_excel(DATA)
+            df.loc[len(df)]=[
+                datetime.now().strftime("%Y-%m-%d"),
+                saat,kisi,operasyon,bantv,modelv,int(adet),sure
+            ]
+            df.to_excel(DATA,index=False)
+
+    saatler=[f"{i}:00" for i in range(8,19)]
+
+    content=f"""
+    <h3>Veri Girişi</h3>
+
+    <form method="post">
+
+    <select name="kisi" required>
+    <option value="">Kişi</option>
+    {''.join([f"<option>{i}</option>" for i in kisiler["AdSoyad"]])}
+    </select>
+
+    <select name="operasyon" required>
+    <option value="">Operasyon</option>
+    {''.join([f"<option>{i}</option>" for i in ops["Operasyon"]])}
+    </select>
+
+    <select name="bant" required>
+    <option value="">Bant</option>
+    {''.join([f"<option>{i}</option>" for i in bant["Bant"]])}
+    </select>
+
+    <select name="model" required>
+    <option value="">Model</option>
+    {''.join([f"<option>{i}</option>" for i in model["Model"]])}
+    </select>
+
+    <select name="saat" required>
+    <option value="">Saat</option>
+    {''.join([f"<option>{i}</option>" for i in saatler])}
+    </select>
+
+    <input name="adet" type="number" placeholder="Adet" required>
+
+    <button>Kaydet</button>
+    </form>
+    """
+
+    return render_template_string(TEMPLATE,content=content)
+
+# RAPOR
 @app.route("/rapor")
 def rapor():
-    return render_template_string(TEMPLATE,content="<h3>Rapor sayfası</h3>")
-
-@app.route("/indir")
-def indir():
-    return send_file("rapor.xlsx",as_attachment=True)
+    df=pd.read_excel(DATA)
+    content=df.to_html(index=False)
+    return render_template_string(TEMPLATE,content=content)
 
 if __name__=="__main__":
     app.run()
